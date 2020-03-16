@@ -30,6 +30,11 @@ Here is where most of algorithms is used to analyze recorded data in a meaningfu
 ** analyze data using algorithms in a meaningful way**
 maybe comparing to previous workouts to see if they improved.
 
+________________________
+CODING NOTES:
+tft printing (0,0) is top left
+tft touch input (0,0) is bottom left
+
 
 ___________________
 note Arduino desktop IDE has a plotting called "serial plotter"
