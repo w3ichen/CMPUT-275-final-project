@@ -7,6 +7,9 @@ Parts:
 - GY-521 Module
 - Battery power
 
+Important Setup Instructions:
+- Copy Wire folder to "Home/arduino-ua/libraries/" directory
+
 Step 1:
 - User interface on the touchscreen with the following buttons:
       i. temperature icon that updates ~10 seconds
@@ -30,13 +33,13 @@ Here is where most of algorithms is used to analyze recorded data in a meaningfu
 ** analyze data using algorithms in a meaningful way**
 maybe comparing to previous workouts to see if they improved.
 
-________________________
-CODING NOTES:
-tft printing (0,0) is top left
-tft touch input (0,0) is bottom left
-
-
 ___________________
 note Arduino desktop IDE has a plotting called "serial plotter"
 https://learn.adafruit.com/experimenters-guide-for-metro/circ08-using%20the%20arduino%20serial%20plotter 
 Useful for visualizing acceleration data!!
+ex. 
+Serial.print(GyX);Serial.print(" ");
+Serial.print(GyY);Serial.print(" ");
+Serial.println(GyZ);
+will plot 3 lines of GyX, GyY and GyZ
+
