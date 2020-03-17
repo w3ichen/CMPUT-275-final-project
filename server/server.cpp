@@ -7,7 +7,11 @@ using namespace std;
 
 SerialPort Serial("/dev/ttyACM0"); //intiialize serial communication
 
+/*
+	Server is used to communicate current time and date to arduino
+*/
 int main(){ 
+	// variables to store variables to send
    string weekDay, month, date, hour, minute, year, second, message;
 
    message = Serial.readline(); // wait on arduino
@@ -18,6 +22,7 @@ int main(){
 
    cout<<"Syncing Time and Date"<<endl;
    cout<<dt<<endl;
+
    // separate string into substrings
    weekDay = strtok(dt," ");
    month = strtok(NULL," ");
@@ -63,5 +68,4 @@ int main(){
 	message = Serial.readline();
 	cout<<"Received: "<<message;
 	cout<<"Sending: "<<second<<endl;
-	
 }
