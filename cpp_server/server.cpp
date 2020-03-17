@@ -5,35 +5,63 @@
 
 using namespace std;
 
-// SerialPort Serial("/dev/ttyACM0"); //intiialize serial communication
+SerialPort Serial("/dev/ttyACM0"); //intiialize serial communication
 
+int main(){ 
+   string weekDay, month, date, hour, minute, year, second, message;
 
-// Serial.writeline(line);
-// Serial.readline();
-
-
-int main(){
-	// current date/time based on current system
+   message = Serial.readline(); // wait on arduino
+   cout<<"Received: "<<message;
+   // current date/time based on current system
    time_t now = time(0);
-   
-   // convert now to string form
-   char* dt = ctime(&now);
+   char* dt = ctime(&now); // convert to char*
 
-   string weekDay, month, date, hour, minute, year, time;
+   cout<<"Syncing Time and Date"<<endl;
+   cout<<dt<<endl;
+   // separate string into substrings
    weekDay = strtok(dt," ");
    month = strtok(NULL," ");
    date = strtok(NULL," ");
-   time = strtok(NULL," ");
+   hour = strtok(NULL,":");
+   minute = strtok(NULL,":");
+   second = strtok(NULL," ");
    year = strtok(NULL," ");
 
-cout<<"week day: "<<weekDay<<endl;
-cout<<"month: "<<month<<endl;
-cout<<"date: "<<date<<endl;
-cout<<"year: "
+   	// sending date
+	Serial.writeline(weekDay+"#"); 
+	message = Serial.readline();
+	cout<<"Received: "<<message<<endl;
 
+	cout<<"Sending: "<<weekDay<<endl;
+	Serial.writeline(month+"#"); 
+	message = Serial.readline();
+	cout<<"Received: "<<message;
 
-   cout << "The local date and time is: " << dt << endl;
+	cout<<"Sending: "<<month<<endl;
+	Serial.writeline(date+"#"); 
+	message = Serial.readline();
+	cout<<"Received: "<<message;
 
+	cout<<"Sending: "<<date<<endl;
+	Serial.writeline(year+"#"); 
+	message = Serial.readline();
+	cout<<"Received: "<<message;
+	cout<<"Sending: "<<year<<endl;
 
+	// sending time
+	Serial.writeline(hour+"#"); 
+	message = Serial.readline();
+	cout<<"Received: "<<message;
+	cout<<"Sending: "<<hour<<endl;
+
+	Serial.writeline(minute+"#"); 
+	message = Serial.readline();
+	cout<<"Received: "<<message;
+	cout<<"Sending: "<<minute<<endl;
+
+	Serial.writeline(second+"#"); 
+	message = Serial.readline();
+	cout<<"Received: "<<message;
+	cout<<"Sending: "<<second<<endl;
 	
 }
