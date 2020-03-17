@@ -5,8 +5,7 @@
 #include <Wire.h> // for accelerometer abd gyroscope and temp
 #include <string.h>
 
-// width/height of the display when rotated horizontally
-#define TFT_WIDTH 320
+#define TFT_WIDTH 320 // Width / height oriented vertically
 #define TFT_HEIGHT 480
 
 // touch screen pins, obtained from the documentaion
@@ -26,9 +25,10 @@
 #define MINPRESSURE  100
 #define MAXPRESSURE 1000
 
-#define TIMEROW 60
-#define DATEROW 200
+#define TIMEROW 60 // y position of clock time row
+#define DATEROW 200 // y position of date row
 
+// constant needed to take measurements
 const int MPU=0x68; 
 int16_t AcX,AcY,AcZ,GyX,GyY,GyZ, Tmp;
 
@@ -38,7 +38,7 @@ TouchScreen ts = TouchScreen(XP, YP, XM, YM, 300);
 enum {HOME, BEGIN_WORKOUT, END_WORKOUT, GRAPH} currentMode; // modes
 
 String weekDay,month,date,year;
-int hour,minutes,seconds;
+int CLKhour,CLKminutes,CLKseconds;
 
 // input buffer to store server messages
 const uint16_t buf_size = 256;
@@ -71,7 +71,6 @@ void setup() {
  	pinMode(XM, OUTPUT);
 
  	syncTimeDate();
-	tft.setTextSize(3);
  	measurements();
  	drawHome();
 }
@@ -87,11 +86,11 @@ void process_line(int index) {
   }else if (index == 3){
   	year = String(buffer);
   }else if (index == 4){
-  	hour = String(buffer).toInt();
+  	CLKhour = String(buffer).toInt();
   }else if (index == 5){
-  	minutes = String(buffer).toInt();
+  	CLKminutes = String(buffer).toInt();
   }else if (index == 6){
-  	seconds = String(buffer).toInt();
+  	CLKseconds = String(buffer).toInt();
   }
   Serial.println("A"); // send acknowledge
 
@@ -138,6 +137,7 @@ void drawHome(){
  	pinMode(XM, OUTPUT);
 	currentMode = HOME;
 	tft.fillScreen(tft.color565(100,200,50));
+	tft.setTextSize(3);
 
 	// temperature at top right
 	tft.fillCircle(TFT_WIDTH- TFT_WIDTH/8,40,35,TFT_RED);
@@ -154,11 +154,11 @@ void drawHome(){
 
 	// write time
 	tft.setTextSize(5);
-	tft.setCursor(30,TIMEROW); tft.print(hour);
+	tft.setCursor(30,TIMEROW); tft.print(CLKhour);
 	tft.setCursor(85,TIMEROW); tft.print(":");
-	tft.setCursor(105,TIMEROW); tft.print(minutes);
+	tft.setCursor(105,TIMEROW); tft.print(CLKminutes);
 	tft.setCursor(160,TIMEROW); tft.print(":");
-	tft.setCursor(185,TIMEROW); tft.print(seconds);
+	tft.setCursor(185,TIMEROW); tft.print(CLKseconds);
 
 	// write date
 	tft.setTextSize(3);
@@ -199,9 +199,10 @@ void measurements(){
 
 */
 }
-void updateTime(int addSeconds){
+void updateTime(int addSeconds, int &seconds, int &minutes, int &hour
+				,int spacing[], int colorRGB[], int rowLine){
 	tft.setTextSize(5);
-	tft.setTextColor(TFT_BLACK, tft.color565(100,200,50));
+	tft.setTextColor(TFT_BLACK, tft.color565(colorRGB[0],colorRGB[1],colorRGB[2]));
 	seconds += addSeconds;
 	int addMinutes = seconds/60; //integer division
 	seconds -= (addMinutes*60); // subract seconds moved to mins
@@ -215,30 +216,31 @@ void updateTime(int addSeconds){
 
 	if (seconds < 10){
 		//redraw background for 1 digit numbers
-		tft.setCursor(185,TIMEROW); tft.print("  ");
+		tft.setCursor(spacing[0],rowLine); tft.print("  ");
 	}
 	// update seconds
-	tft.setCursor(185,TIMEROW); tft.print(seconds);
+	tft.setCursor(spacing[0],rowLine); tft.print(seconds);
 	if (addMinutes > 0){
 		// need to update minutes
 		if (minutes < 10){
 			//redraw background for 1 digit numbers
-			tft.setCursor(105,TIMEROW); tft.print("  ");
+			tft.setCursor(spacing[1],rowLine); tft.print("  ");
 		}
-		tft.setCursor(105,TIMEROW); tft.print(minutes);
+		tft.setCursor(spacing[1],rowLine); tft.print(minutes);
 	}
 	if (addHours > 0){
 		// need to update hours
-		if (minutes < 10){
+		if (hour < 10){
 			//redraw background for 1 digit numbers
-			tft.setCursor(30,TIMEROW); tft.print("  ");
+			tft.setCursor(spacing[2],rowLine); tft.print("  ");
 		}
-		tft.setCursor(30,TIMEROW); tft.print(hour);
+		tft.setCursor(spacing[2],rowLine); tft.print(hour);
 	}
 
  	pinMode(YP, INPUT);
  	pinMode(XM, INPUT);
 }
+
 void updateTemp(){
 	tft.setTextSize(3);
 	pinMode(YP, OUTPUT);
@@ -253,12 +255,50 @@ void updateTemp(){
 }
 void workout(){
 	//*********start workout stuff here***/
+	int stopWatch_h = 0; int stopWatch_m = 0; int stopWatch_s = 0;
+	int STOPROW = 15;
 	pinMode(YP, OUTPUT);
  	pinMode(XM, OUTPUT);
 	// start workout
-	tft.fillScreen(TFT_GREEN);
+	tft.fillScreen(tft.color565(200,160,188));
+	//print the stop watch
+	tft.setTextSize(5);
+	tft.setTextColor(TFT_BLACK);
+	tft.setCursor(TFT_WIDTH/2-120,STOPROW); tft.print(stopWatch_h);
+	tft.setCursor(TFT_WIDTH/2-55,STOPROW); tft.print(":");
+	tft.setCursor(TFT_WIDTH/2-20, STOPROW); tft.print(stopWatch_m);
+	tft.setCursor(TFT_WIDTH/2+45,STOPROW); tft.print(":");
+	tft.setCursor(TFT_WIDTH/2+75 ,STOPROW); tft.print(stopWatch_s);
+
+	int spacing[]={TFT_WIDTH/2+75,TFT_WIDTH/2-20,TFT_WIDTH/2-120};
+	int colorRGB[]={200,160,188};
+	while (true){
+		if (millis()%1000 == 0){ // 1000 miliseconds in a second
+			// add 1 second
+
+			updateTime(1,stopWatch_s, stopWatch_m, stopWatch_h
+				,spacing,colorRGB,STOPROW);
+		}
+
+		TSPoint touch = ts.getPoint();
+	 	if (touch.z >= MINPRESSURE && touch.z <= MAXPRESSURE) { 
+			// *****notes probably change this, for testing only
+			// stops work out!!
+			// IMPORTANT: need to update home page clock before exiting
+			int timeElaspedSeconds = stopWatch_s + (stopWatch_m*60) + (stopWatch_h*3600);
+			// add time in workout to clock
+			int spacing[] = {185,105,30};int colorRGB[] = {100,200,50};
+			updateTime(timeElaspedSeconds,CLKseconds, CLKminutes, CLKhour
+	 			,spacing,colorRGB,TIMEROW); // add one second
+			drawHome(); // go to home screen
+			currentMode = HOME;
+			break;
+	 	}
+	}
+
+
 	pinMode(YP, INPUT);
- 	pinMode(XM, INPUT);
+ 	pinMode(XM, INPUT);  
 }
 
 int main() {
@@ -281,7 +321,9 @@ int main() {
 	 	if (millis()%1000 == 0 && currentMode == HOME){
 	 		// every second update temperature and tie
 	 		updateTemp();
-	 		updateTime(1); // add one second
+	 		int spacing[] = {185,105,30}; int colorRGB[] = {100,200,50};
+	 		updateTime(1,CLKseconds, CLKminutes, CLKhour
+	 			,spacing,colorRGB,TIMEROW); // add one second
 
 	 	}
 	 	if (currentMode == BEGIN_WORKOUT){

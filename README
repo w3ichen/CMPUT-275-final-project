@@ -1,23 +1,56 @@
-CMPUT 275 Final Project
-Fitness Tracking Device
+CMPUT 275 Winter 2020
+Final Project : Fitness Tracking Device
 
-Parts: 
-- Arduino / Breadboard / Wires
-- TFT display
-- GY-521 Module
-- Battery power
+Names: Gurbani Baweja, Steven Jiao, Tyler Mah, Weichen Qiu
+ID(s): 1590254,<insert steven's ID>,<insert tyler's id>, 1578205
 
-Important Setup Instructions:
-- Copy Wire folder to "Home/arduino-ua/libraries/" directory
+Included Files:
+- README
+- Makefile
+- main.cpp
+- cpp_server folder
+      - Makefile (for desktop)
+      - serialport.h
+      - serialport.cpp
+      - server.cpp
+- Wire folder (Arduino Library)
+      - Wire.h
+      - Wire.cpp
+      - twi.h
+      - twi.c
 
+Running Instructions:
+  1. Copy "Wire" folder to "/Home/arduino-ua/libraries/"
+  2. Type "make upload" into terminal
+  3. Navigate to "server" folder and type "make", then type "./server"
+
+Accessories:
+      - Arduino
+      - TFT Touch Screen
+      - GY-521 Module (accelerometer, gyroscope, temperature)
+      - Breadboard
+      - Wires
+
+Wiring instructions:
+  1. Connect a pin to SCL and SDA pins (top-right), then attach touch screen
+  2. Connect Vcc and GND of GY-521 to 5V and GND respectively
+  3. Connect SCL of module to arduino and SDA to SDA
+
+Notes and Assumptions:
+  **It is crucial to copy Wire folder to arduino libraries
+  - Server files syncs arduino to PC time and date. 
+      - Typing "./server" will repeatedly resync to the time
+
+==========================================================
+CODING NOTES vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 Step 1:
 - User interface on the touchscreen with the following buttons:
-      i. temperature icon that updates ~10 seconds
-      ii. Current time and date at top (if possible) probably gets time/date from computer at upload
-      iii. Start workout button
+      i. [DONE] temperature icon that updates ~10 seconds
+      ii. [DONE] Current time and date at top (if possible) probably gets time/date from computer at upload
+      iii. [DONE] Start workout button
       iv. End workout button
       v. View realtime graph
-- Use gyroscope to turn screen off to save power when device is not facing up
+- Use gyroscope to turn screen off to save power when device is not facing up (prob find voltage pin to display and digitwrite it to off??)
 
 Step 2:
 - When start workout is pressed:
@@ -33,9 +66,14 @@ Here is where most of algorithms is used to analyze recorded data in a meaningfu
 ** analyze data using algorithms in a meaningful way**
 maybe comparing to previous workouts to see if they improved.
 
+
+_____________________________________
+OTHER NOTES:
+- plz use meausrements() function to get measurements
+- plz update currentMode as you change to different modes
 ___________________
-note Arduino desktop IDE has a plotting called "serial plotter"
-https://learn.adafruit.com/experimenters-guide-for-metro/circ08-using%20the%20arduino%20serial%20plotter 
+!!note Arduino desktop IDE has a plotting called "serial plotter"
+"https://learn.adafruit.com/experimenters-guide-for-metro/circ08-using%20the%20arduino%20serial%20plotter"
 Useful for visualizing acceleration data!!
 ex. 
 Serial.print(GyX);Serial.print(" ");
