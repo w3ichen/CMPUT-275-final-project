@@ -159,7 +159,7 @@ void drawHome(){
 	tft.print(Tmp); // print the temperature
 
 	// start workout button
-	tft.setCursor(TFT_WIDTH/8,TFT_HEIGHT-TFT_HEIGHT/4 + 20);
+	tft.setCursor(TFT_WIDTH/8 + 5,TFT_HEIGHT-TFT_HEIGHT/4 + 20);
 	tft.print("START WORKOUT");
 	tft.fillRect(TFT_WIDTH/8,TFT_HEIGHT-TFT_HEIGHT/4,
 				 TFT_WIDTH-TFT_WIDTH/4,3,TFT_BLUE);
@@ -284,23 +284,25 @@ void updateTemp(){
 	pinMode(XM, INPUT);
 }
 
+
 /*
 	Workout Mode
 */
 void workout(){
-	//*********start workout stuff here***/
-
-	//WRITE WORKOUT CODE HERE ///////////////////////////////////////
-
-
-
-
 	// stopwatch starts at 0
 	int stopWatch_h = 0; int stopWatch_m = 0; int stopWatch_s = 0;
 	int STOPROW = 15; // spacing purposes
 	pinMode(YP, OUTPUT);
  	pinMode(XM, OUTPUT);
 	tft.fillScreen(tft.color565(200,160,188));
+
+	// draw the end workout button
+	tft.setTextSize(3);
+	tft.setTextColor(TFT_BLACK, tft.color565(200,160,188));
+	tft.setCursor(TFT_WIDTH/8 + 22,TFT_HEIGHT-TFT_HEIGHT/4 + 20);
+	tft.print("END WORKOUT");
+	tft.fillRect(TFT_WIDTH/8,TFT_HEIGHT-TFT_HEIGHT/4,
+				 TFT_WIDTH-TFT_WIDTH/4,3,TFT_BLACK);
 
 	//print the stop watch
 	tft.setTextSize(5);
