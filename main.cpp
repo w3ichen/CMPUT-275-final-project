@@ -449,7 +449,7 @@ void drawWorkout(int stopWatch_h, int stopWatch_m, int stopWatch_s) {
 	Workout Mode
 */
 void workout(){
-	bool drawWorkoutFlag = true;
+	bool screenOn = true;
 	int stopWatch_h = 0; int stopWatch_m = 0; int stopWatch_s = 0;
 	drawWorkout(stopWatch_h,stopWatch_m,stopWatch_s);
 	// // stopwatch starts at 0
@@ -478,32 +478,51 @@ void workout(){
 	// // spacing and colorRGB used for updated stopwatch
 	int spacing[]={TFT_WIDTH/2+75,TFT_WIDTH/2-20,TFT_WIDTH/2-120};
 	int colorRGB[]={200,160,188};
-
-
+int oldRoll = 0;
+int time_millis = millis();
 	while (true){
+		time_millis = millis();
+
 		// if (millis()%1000 == 0){ // 1000 miliseconds in a second
 		// 	// add 1 second
 		// 	updateTime(1,stopWatch_s, stopWatch_m, stopWatch_h
 		// 		,spacing,colorRGB,STOPROW);
 		// }
-
+if (time_millis%100 == 0){
 		// while in workout mode, get the gyroscope data
 		processGyr();
 		// "turn off" screen if screen is on its side position
-		if (roll > 70) {
-	 		tft.fillScreen(tft.color565(200,160,188));
-	 		drawWorkoutFlag = true;
-		} else {
-			if (drawWorkoutFlag == true) {
-				drawWorkout(stopWatch_h, stopWatch_m, stopWatch_s);
-				drawWorkoutFlag = false;
-			}
-			if (millis()%1000 == 0){ // 1000 miliseconds in a second
-				// add 1 second
-			updateTime(1,stopWatch_s, stopWatch_m, stopWatch_h
-					,spacing,colorRGB,STOPROW);
+		if (abs(roll - oldRoll) > 2) {
+			if (screenOn == true){
+				screenOn = false; // turn it off
+				// go from on to off
+				pinMode(YP, OUTPUT);
+ 				pinMode(XM, OUTPUT);  
+		 		tft.fillScreen(TFT_BLACK);
+		 		Serial.println("turning screen off");
+			}else if (screenOn == false){
+				screenOn = true;
+				// redraw
+				drawWorkout(stopWatch_h,stopWatch_m,stopWatch_s); 
 			}
 		}
+
+		// set the old roll to new reading of roll
+		oldRoll = roll; 
+}
+if (time_millis%1000 == 0){
+	Serial.println("updating seconds");
+		// always update the time every 1000 milliseconds
+		if (screenOn == true){
+			// only use function if screen is on
+			updateTime(1,stopWatch_s, stopWatch_m, stopWatch_h
+			,spacing,colorRGB,STOPROW);
+		}else{
+			// add one but don't print
+			stopWatch_s += 1;
+		}
+}
+
 
 	// TEMPORARY///FOR TESTING PURPOSES//////////////////////
 		TSPoint touch = ts.getPoint();
