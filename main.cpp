@@ -4,6 +4,7 @@
 #include <Adafruit_GFX.h>
 #include <Wire.h> // for accelerometer abd gyroscope and temp
 #include <string.h>
+#include <stdio.h>
 
 #define TFT_WIDTH 320 // Width / height oriented vertically
 #define TFT_HEIGHT 480
@@ -30,7 +31,13 @@
 
 // constant needed to take measurements
 const int MPU=0x68; 
-int16_t AcX,AcY,AcZ,GyX,GyY,GyZ, Tmp;
+int16_t GyX,GyY,GyZ,Tmp;
+int32_t GyXCal, GyYCal, GyZCal, AcX, AcY, AcZ, AcTot;
+float pitch, roll, yaw;
+float pitch_acc, roll_acc;
+float pitchOut = 0; 
+float rollOut = 0;
+long loop_timer = 0;
 
 MCUFRIEND_kbv tft;
 
@@ -51,6 +58,8 @@ char* buffer = (char *) malloc(buf_size);
 void measurements(); 
 void drawHome(); 
 void syncTimeDate();
+void calibration();
+// void getAcc();
 
 void setup() {
 	init();
@@ -66,13 +75,26 @@ void setup() {
 	Wire.begin();
 	Wire.beginTransmission(MPU);
 	Wire.write(0x6B); 
-	Wire.write(0);    
+	Wire.write(0x00);    
 	Wire.endTransmission(true);
+	// gyroscope
+	Wire.beginTransmission(MPU);
+	Wire.write(0x1B); 
+	Wire.write(0x08); // for +/- 500 deg/s
+	Wire.endTransmission();
+	// accelerometer
+	Wire.beginTransmission(MPU);
+	Wire.write(0x1C); 
+	Wire.write(0x08); // for +/- 8g
+	Wire.endTransmission();
+	
 
 	pinMode(YP, OUTPUT);
  	pinMode(XM, OUTPUT);
 
+ 	Serial.flush();
  	syncTimeDate(); // sync time with PC
+ 	calibration(); // for calibrating gyro and accelerometer
  	measurements(); // get first measurents
  	drawHome(); // draw home page
 }
@@ -183,6 +205,109 @@ void drawHome(){
  	pinMode(XM, INPUT);
 }
 
+// for debugging purposes /// **** REMOVE LATER***** ///
+char temp_str[7];
+char* int16_to_str(int16_t num) {
+	sprintf(temp_str, "%6d", num);
+	return temp_str;
+}
+
+// 
+void calibration() {
+	// set all values initially to 0
+	GyXCal = 0;
+	GyYCal = 0;
+	GyZCal = 0;
+	pitch = 0;
+	roll = 0;
+	yaw = 0;
+	Serial.print("Calibrating");
+	// calibrate using 1000 readings
+	for (int i = 0; i < 1000; i++) {
+		if (i % 200 == 0) {
+			Serial.print(".");
+		}
+		Wire.beginTransmission(MPU);
+		Wire.write(0x3B);  
+		Wire.endTransmission(false);
+		Wire.requestFrom(MPU,7*2,true); 
+		while (Wire.available() < 14); 
+		// read in acc data as well and calibrate later if needed
+		AcX=Wire.read()<<8|Wire.read();    
+		AcY=Wire.read()<<8|Wire.read();  
+		AcZ=Wire.read()<<8|Wire.read();  
+		Tmp = Wire.read()<<8 | Wire.read();
+		// get gyro calibration and add to total 
+		GyXCal+=(Wire.read()<<8|Wire.read())/65.5;  
+		GyYCal+=(Wire.read()<<8|Wire.read())/65.5;  
+		GyZCal+=(Wire.read()<<8|Wire.read())/65.5;  
+		Tmp = Tmp/340.00+36.53; // convert to celsius
+		delay(3);
+	}
+	// average it out for final calibration values
+	GyXCal /= 1000;
+	GyYCal /= 1000;
+	GyZCal /= 1000;
+
+	// output the calibrated values to serial mon
+	Serial.println();
+	Serial.print("Gyroscope Calibrated: ");
+	Serial.print("X = "); Serial.print(GyXCal);
+	Serial.print("| Y = "); Serial.print(GyYCal);
+	Serial.print("| Z = "); Serial.println(GyZCal);
+}
+
+// process gyro readings and get them into pitch and roll values
+void processGyr() {
+	// first get the measurements
+	measurements();
+	// divide GyX and GyY by 65.5 to convert reading into degrees 
+	GyX /= 65.5; GyX -= GyXCal; // subtract calibration reading 
+	GyY /= 65.5; GyY -= GyYCal;
+	GyZ /= 65.5; GyZ -= GyZCal;
+
+	// calculate pitch by adding the degrees changed divided by 
+	// frequency of getting readings 
+	pitch += GyX/25;
+	roll += GyY/25;
+
+	// OTHER VALUES FOR BETTER? READINGS
+
+	// pitch += roll * sin(GyZ/(65.5 * 50) * 3.142/180);
+	// roll -= pitch * sin(GyZ/(65.5 * 50) * 3.142/180);
+
+	// AcTot = sqrt((AcX * AcX)+(AcY * AcY)+(AcZ * AcZ));
+	// pitch_acc = asin((float)AcY/AcTot) * 57.296;
+	// roll_acc = asin((float)AcX/AcTot) * -57.296;
+
+	// pitch = pitch * 0.9996 + pitch_acc * 0.0004;
+	// roll = roll * 0.9996 + roll_acc * 0.0004;
+
+	// pitchOut = pitchOut * 0.9 + pitch * 0.1;
+	// rollOut = rollOut * 0.9 + roll * 0.1;
+
+	// END OF OTHER VALUES; not sure if we need but I'll keep them here
+
+	// print the value we see onto the screen because printing to 
+	// serial mon causes the frequency of processing to slow down, which messes
+	// up getting our values
+	// tft.setTextSize(3);
+	// pinMode(YP, OUTPUT);
+	// pinMode(XM, OUTPUT);
+	// tft.setTextColor(TFT_BLACK, TFT_WHITE);
+	// tft.setCursor(TFT_WIDTH/2,TFT_HEIGHT/2);
+	// tft.print(pitch); // update pitch on screen
+	// pinMode(YP, INPUT);
+	// pinMode(XM, INPUT);
+
+	// SERIAL OUTPUT OF PITCH. used for debugging purposes
+
+	//Serial.print("Pitch: "); Serial.println(pitch);
+	// Serial.print(" | Roll: "); Serial.print(roll);
+	// Serial.print(" | GyZ: "); Serial.println(GyZ);
+
+}
+
 /*
 	Take measurements from GY-521 module: acceleration in X,Y,Z,
 	gyroscope in X,Y,Z, temperature in celsuis. Data stored in global variables
@@ -193,7 +318,8 @@ void measurements(){
   Wire.beginTransmission(MPU);
   Wire.write(0x3B);  
   Wire.endTransmission(false);
-  Wire.requestFrom(MPU,12,true);  
+  Wire.requestFrom(MPU,7*2,true);  
+  while(Wire.available() < 14);
   AcX=Wire.read()<<8|Wire.read();    
   AcY=Wire.read()<<8|Wire.read();  
   AcZ=Wire.read()<<8|Wire.read();  
@@ -203,20 +329,29 @@ void measurements(){
   GyZ=Wire.read()<<8|Wire.read();  
   Tmp = Tmp/340.00+36.53; // convert to celsius
 
-/*
-  Serial.print("Accelerometer: ");
-  Serial.print("X = "); Serial.print(AcX);
-  Serial.print(" | Y = "); Serial.print(AcY);
-  Serial.print(" | Z = "); Serial.println(AcZ); 
 
-  Serial.print("Gyroscope: ");
-  Serial.print("X = "); Serial.print(GyX);
-  Serial.print(" | Y = "); Serial.print(GyY);
-  Serial.print(" | Z = "); Serial.println(GyZ);
+  // SERIAL-MON TESTING FOR RAW DATA 
 
-  Serial.print(" | tmp = "); Serial.print(Tmp);
+  // Serial.print("Accelerometer: ");
+  // Serial.print("X = "); Serial.print(int16_to_str(AcX));
+  // Serial.print(" | Y = "); Serial.print(int16_to_str(AcY));
+  // Serial.print(" | Z = "); Serial.println(int16_to_str(AcZ)); 
 
-*/
+  // Serial.print("Gyroscope: ");
+  // Serial.print("X = "); Serial.print(int16_to_str(GyX - (int16_t)GyXCal));
+  // Serial.print(" | Y = "); Serial.print(int16_to_str(GyY - (int16_t)GyYCal));
+  // Serial.print(" | Z = "); Serial.println(int16_to_str(GyZ - (int16_t)GyZCal));
+
+  // Serial.print(" | tmp = "); Serial.println(Tmp);
+  // pitch += (GyX - GyXCal);
+  // roll += (GyY - GyYCal);
+  // yaw += (GyZ - GyZCal);
+
+
+  // Serial.print("Pitch: "); Serial.print(int16_to_str(pitch));
+  // Serial.print(" | Roll: "); Serial.print(int16_to_str(roll));
+  // Serial.print(" | Yaw: "); Serial.println(int16_to_str(yaw));
+
 }
 
 /*
@@ -285,12 +420,7 @@ void updateTemp(){
 }
 
 
-/*
-	Workout Mode
-*/
-void workout(){
-	// stopwatch starts at 0
-	int stopWatch_h = 0; int stopWatch_m = 0; int stopWatch_s = 0;
+void drawWorkout(int stopWatch_h, int stopWatch_m, int stopWatch_s) {
 	int STOPROW = 15; // spacing purposes
 	pinMode(YP, OUTPUT);
  	pinMode(XM, OUTPUT);
@@ -313,16 +443,67 @@ void workout(){
 	tft.setCursor(TFT_WIDTH/2+45,STOPROW); tft.print(":");
 	tft.setCursor(TFT_WIDTH/2+75 ,STOPROW); tft.print(stopWatch_s);
 
-	// spacing and colorRGB used for updated stopwatch
+}
+
+/*
+	Workout Mode
+*/
+void workout(){
+	bool drawWorkoutFlag = true;
+	int stopWatch_h = 0; int stopWatch_m = 0; int stopWatch_s = 0;
+	drawWorkout(stopWatch_h,stopWatch_m,stopWatch_s);
+	// // stopwatch starts at 0
+	int STOPROW = 15; // spacing purposes
+	// pinMode(YP, OUTPUT);
+ // 	pinMode(XM, OUTPUT);
+	// tft.fillScreen(tft.color565(200,160,188));
+
+	// // draw the end workout button
+	// tft.setTextSize(3);
+	// tft.setTextColor(TFT_BLACK, tft.color565(200,160,188));
+	// tft.setCursor(TFT_WIDTH/8 + 22,TFT_HEIGHT-TFT_HEIGHT/4 + 20);
+	// tft.print("END WORKOUT");
+	// tft.fillRect(TFT_WIDTH/8,TFT_HEIGHT-TFT_HEIGHT/4,
+	// 			 TFT_WIDTH-TFT_WIDTH/4,3,TFT_BLACK);
+
+	// //print the stop watch
+	// tft.setTextSize(5);
+	// tft.setTextColor(TFT_BLACK);
+	// tft.setCursor(TFT_WIDTH/2-120,STOPROW); tft.print(stopWatch_h);
+	// tft.setCursor(TFT_WIDTH/2-55,STOPROW); tft.print(":");
+	// tft.setCursor(TFT_WIDTH/2-20, STOPROW); tft.print(stopWatch_m);
+	// tft.setCursor(TFT_WIDTH/2+45,STOPROW); tft.print(":");
+	// tft.setCursor(TFT_WIDTH/2+75 ,STOPROW); tft.print(stopWatch_s);
+
+	// // spacing and colorRGB used for updated stopwatch
 	int spacing[]={TFT_WIDTH/2+75,TFT_WIDTH/2-20,TFT_WIDTH/2-120};
 	int colorRGB[]={200,160,188};
-	while (true){
-		if (millis()%1000 == 0){ // 1000 miliseconds in a second
-			// add 1 second
-			updateTime(1,stopWatch_s, stopWatch_m, stopWatch_h
-				,spacing,colorRGB,STOPROW);
-		}
 
+
+	while (true){
+		// if (millis()%1000 == 0){ // 1000 miliseconds in a second
+		// 	// add 1 second
+		// 	updateTime(1,stopWatch_s, stopWatch_m, stopWatch_h
+		// 		,spacing,colorRGB,STOPROW);
+		// }
+
+		// while in workout mode, get the gyroscope data
+		processGyr();
+		// "turn off" screen if screen is on its side position
+		if (roll > 70) {
+	 		tft.fillScreen(tft.color565(200,160,188));
+	 		drawWorkoutFlag = true;
+		} else {
+			if (drawWorkoutFlag == true) {
+				drawWorkout(stopWatch_h, stopWatch_m, stopWatch_s);
+				drawWorkoutFlag = false;
+			}
+			if (millis()%1000 == 0){ // 1000 miliseconds in a second
+				// add 1 second
+			updateTime(1,stopWatch_s, stopWatch_m, stopWatch_h
+					,spacing,colorRGB,STOPROW);
+			}
+		}
 
 	// TEMPORARY///FOR TESTING PURPOSES//////////////////////
 		TSPoint touch = ts.getPoint();
@@ -338,9 +519,13 @@ void workout(){
 	 			,spacing,colorRGB,TIMEROW); // add one second
 			drawHome(); // go to home screen
 			currentMode = HOME;
+			// reset pitch and roll if we exit out
+			pitch = 0;
+			roll = 0;
 			break;
 	///////////////////////////////////////////////////////////////////
 	 	}
+
 	}
 	pinMode(YP, INPUT);
  	pinMode(XM, INPUT);  
