@@ -23,6 +23,8 @@ Running Instructions:
   1. Copy "Wire" folder to "/Home/arduino-ua/libraries/"
   2. Type "make upload" into terminal
   3. Navigate to "server" folder and type "make", then type "./server"
+  4. Connect battery to arduino
+  5. Unplug arduino from computer (arduino is now portable)
 
 Accessories:
       - Arduino
@@ -30,6 +32,7 @@ Accessories:
       - GY-521 Module (accelerometer, gyroscope, temperature)
       - Breadboard
       - Wires
+      - Battery and battery-to-arduino wire connection
 
 Wiring instructions:
   1. Connect a pin to SCL and SDA pins (top-right), then attach touch screen
