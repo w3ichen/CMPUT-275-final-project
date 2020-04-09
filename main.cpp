@@ -5,6 +5,8 @@
 #include <Wire.h> // for accelerometer abd gyroscope and temp
 #include <string.h>
 #include <stdio.h>
+#include <utility>
+#include <stack>
 
 #define TFT_WIDTH 320 // Width / height oriented vertically
 #define TFT_HEIGHT 480
@@ -257,6 +259,16 @@ void calibration() {
 	Serial.print("| Z = "); Serial.println(GyZCal);
 }
 
+// process acceleration readings
+void processAc() {
+  // get measurements
+  measurements();
+  AcX /= 16384;
+  AcY /= 16384;
+  AcZ /= 16384;
+  AcTot = AcX + AcY + AcZ;
+}
+
 // process gyro readings and get them into pitch and roll values
 void processGyr() {
 	// first get the measurements
@@ -434,6 +446,14 @@ void drawWorkout(int stopWatch_h, int stopWatch_m, int stopWatch_s) {
 	tft.fillRect(TFT_WIDTH/8,TFT_HEIGHT-TFT_HEIGHT/4,
 				 TFT_WIDTH-TFT_WIDTH/4,3,TFT_BLACK);
 
+  // draw the graph button
+  tft.setTextSize(3);
+  tft.setTextColor(TFT_BLACK, tft.color565(200,160,188));
+  tft.setCursor(TFT_WIDTH/8 + 22,TFT_HEIGHT-TFT_HEIGHT*2/3 + 20);
+  tft.print("SHOW GRAPH");
+  tft.fillRect(TFT_WIDTH/8,TFT_HEIGHT-TFT_HEIGHT*2/3,
+         TFT_WIDTH-TFT_WIDTH/4,3,TFT_BLACK);
+
 	//print the stop watch
 	tft.setTextSize(5);
 	tft.setTextColor(TFT_BLACK);
@@ -478,8 +498,12 @@ void workout(){
 	// // spacing and colorRGB used for updated stopwatch
 	int spacing[]={TFT_WIDTH/2+75,TFT_WIDTH/2-20,TFT_WIDTH/2-120};
 	int colorRGB[]={200,160,188};
-int oldRoll = 0;
-int time_millis = millis();
+  int oldRoll = 0;
+  int time_millis = millis();
+
+  // Stores time and total acceleration
+  stack<pair<int,int32_t> AcData;
+
 	while (true){
 		time_millis = millis();
 
@@ -488,62 +512,73 @@ int time_millis = millis();
 		// 	updateTime(1,stopWatch_s, stopWatch_m, stopWatch_h
 		// 		,spacing,colorRGB,STOPROW);
 		// }
-if (time_millis%100 == 0){
-		// while in workout mode, get the gyroscope data
-		processGyr();
-		// "turn off" screen if screen is on its side position
-		if (abs(roll - oldRoll) > 2) {
-			if (screenOn == true){
-				screenOn = false; // turn it off
-				// go from on to off
-				pinMode(YP, OUTPUT);
- 				pinMode(XM, OUTPUT);  
-		 		tft.fillScreen(TFT_BLACK);
-		 		Serial.println("turning screen off");
-			}else if (screenOn == false){
-				screenOn = true;
-				// redraw
-				drawWorkout(stopWatch_h,stopWatch_m,stopWatch_s); 
-			}
-		}
+    if (time_millis%100 == 0){
+      // save total acceleration every 100ms
+      processAc();
+      AcData.push(make_pair(time_millis,AcTot));
 
-		// set the old roll to new reading of roll
-		oldRoll = roll; 
-}
-if (time_millis%1000 == 0){
-	Serial.println("updating seconds");
-		// always update the time every 1000 milliseconds
-		if (screenOn == true){
-			// only use function if screen is on
-			updateTime(1,stopWatch_s, stopWatch_m, stopWatch_h
-			,spacing,colorRGB,STOPROW);
-		}else{
-			// add one but don't print
-			stopWatch_s += 1;
-		}
-}
+  		// while in workout mode, get the gyroscope data
+  		processGyr();
+  		// "turn off" screen if screen is on its side position
+  		if (abs(roll - oldRoll) > 2) {
+  			if (screenOn == true){
+  				screenOn = false; // turn it off
+  				// go from on to off
+  				pinMode(YP, OUTPUT);
+   				pinMode(XM, OUTPUT);  
+  		 		tft.fillScreen(TFT_BLACK);
+  		 		Serial.println("turning screen off");
+  			}else if (screenOn == false){
+  				screenOn = true;
+  				// redraw
+  				drawWorkout(stopWatch_h,stopWatch_m,stopWatch_s); 
+  			}
+  		}
 
+  		// set the old roll to new reading of roll
+  		oldRoll = roll; 
+    }
+    if (time_millis%1000 == 0){
+    	Serial.println("updating seconds");
+    		// always update the time every 1000 milliseconds
+    		if (screenOn == true){
+    			// only use function if screen is on
+    			updateTime(1,stopWatch_s, stopWatch_m, stopWatch_h
+    			,spacing,colorRGB,STOPROW);
+    		}else{
+    			// add one but don't print
+    			stopWatch_s += 1;
+    		}
+    }
 
-	// TEMPORARY///FOR TESTING PURPOSES//////////////////////
-		TSPoint touch = ts.getPoint();
-	 	if (touch.z >= MINPRESSURE && touch.z <= MAXPRESSURE) { 
-			// ***** probably change this, for testing only
-			// stops work out!!
-	
+    // I set both graph and stop work out buttons in here so maybe keep?
+    // TEMPORARY///FOR TESTING PURPOSES//////////////////////
+  	TSPoint touch = ts.getPoint();
+   	if (touch.z >= MINPRESSURE && touch.z <= MAXPRESSURE) { 
+  		// ***** probably change this, for testing only
+      int pty = map(touch.y, TS_MINX, TS_MAXX, 0, TFT_WIDTH);
 
-			int timeElaspedSeconds = stopWatch_s + (stopWatch_m*60) + (stopWatch_h*3600);
-			// add time in workout to clock
-			int spacing[] = {185,105,30};int colorRGB[] = {100,200,50};
-			updateTime(timeElaspedSeconds,CLKseconds, CLKminutes, CLKhour
-	 			,spacing,colorRGB,TIMEROW); // add one second
-			drawHome(); // go to home screen
-			currentMode = HOME;
-			// reset pitch and roll if we exit out
-			pitch = 0;
-			roll = 0;
-			break;
-	///////////////////////////////////////////////////////////////////
-	 	}
+      // shows graph
+      if (pty >= TFT_HEIGHT/4) {
+      
+      }
+
+      // stops work out
+      if (pty <= TFT_HEIGHT/4){
+  			int timeElaspedSeconds = stopWatch_s + (stopWatch_m*60) + (stopWatch_h*3600);
+  			// add time in workout to clock
+  			int spacing[] = {185,105,30};int colorRGB[] = {100,200,50};
+  			updateTime(timeElaspedSeconds,CLKseconds, CLKminutes, CLKhour
+  	 			,spacing,colorRGB,TIMEROW); // add one second
+  			drawHome(); // go to home screen
+  			currentMode = HOME;
+  			// reset pitch and roll if we exit out
+  			pitch = 0;
+  			roll = 0;
+  			break;
+      }
+    ///////////////////////////////////////////////////////////////////
+ 	  }
 
 	}
 	pinMode(YP, INPUT);
