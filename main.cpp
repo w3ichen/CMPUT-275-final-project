@@ -5,8 +5,6 @@
 #include <Wire.h> // for accelerometer abd gyroscope and temp
 #include <string.h>
 #include <stdio.h>
-#include <utility>
-#include <stack>
 
 #define TFT_WIDTH 320 // Width / height oriented vertically
 #define TFT_HEIGHT 480
@@ -34,7 +32,7 @@
 // constant needed to take measurements
 const int MPU=0x68; 
 int16_t GyX,GyY,GyZ,Tmp;
-int32_t GyXCal, GyYCal, GyZCal, AcX, AcY, AcZ, AcTot;
+int32_t GyXCal, GyYCal, GyZCal, AcX, AcY, AcZ, AcTot, AcAvg;
 float pitch, roll, yaw;
 float pitch_acc, roll_acc;
 float pitchOut = 0; 
@@ -465,6 +463,62 @@ void drawWorkout(int stopWatch_h, int stopWatch_m, int stopWatch_s) {
 
 }
 
+// Stores total accelerations
+struct AcData {
+  int32_t AcTotal;
+};
+AcData ac_data[6000]; // 6000 stores 10 minutes of data
+
+// Swap function for sorting
+void swap(AcData &a, AcData &b) {
+    AcData temp = a;
+    a = b;
+    b = temp;
+}
+
+// Actual sorting of quick sort; implemented from pseudocode on ECLASS
+int pivot(AcData a[], int n, int pi) {
+  // swap the pivot with the last term
+  swap(a[pi], a[n-1]);
+  // store high and low index
+  int lo = 0;
+  int hi = n-2;
+
+  // iterate until lo > hi
+  while (lo <= hi) {
+    // if lo index distance is less than or equal to pivot's, move low index up
+    if (a[lo].AcTotal <= a[n-1].AcTotal) {
+      lo++;
+    // if hi index distance is greater than pivot's, move high down
+    } else if (a[hi].AcTotal > a[n-1].AcTotal) {
+      hi--;
+    // else swap high and low 
+    } else {
+      swap(a[lo], a[hi]);
+    }
+  }
+  // swap the pivot back into position
+  swap(a[lo], a[n-1]);
+
+  // return the new low index
+  return lo;
+}
+
+// Quick sort implementation using recursion of a AcData struct 
+void qSort(AcData a[], int n) {
+  // if n <=1 then do nothing
+  if (n > 1) {
+    // Initial pivot set to be at the half-way point (a little above half)
+    int pi = n/2;
+    // store the new pivot after pivoting the array
+    int new_pi = pivot(a, n, pi);
+    // recursively sort the bottom portion before pivot
+    qSort(a, new_pi);
+    // recursively sort top portion after pivot
+    qSort(&a[new_pi+1], n-new_pi-1);
+  }
+}
+
 /*
 	Workout Mode
 */
@@ -501,8 +555,10 @@ void workout(){
   int oldRoll = 0;
   int time_millis = millis();
 
-  // Stores time and total acceleration
-  stack<pair<int,int32_t> AcData;
+  // reset values
+  AcAvg = 0;
+  bool showGraph = false;
+  int AcIndex = 0;
 
 	while (true){
 		time_millis = millis();
@@ -515,7 +571,12 @@ void workout(){
     if (time_millis%100 == 0){
       // save total acceleration every 100ms
       processAc();
-      AcData.push(make_pair(time_millis,AcTot));
+      ac_data[AcIndex].AcTotal = AcTot;
+      AcIndex++;
+      // show graph if button was pressed
+      if (showGraph == true) {
+
+      }
 
   		// while in workout mode, get the gyroscope data
   		processGyr();
@@ -558,18 +619,28 @@ void workout(){
   		// ***** probably change this, for testing only
       int pty = map(touch.y, TS_MINX, TS_MAXX, 0, TFT_WIDTH);
 
-      // shows graph
-      if (pty >= TFT_HEIGHT/4) {
-      
+      // graph button pushed
+      if (pty > TFT_HEIGHT/5) {
+        pinMode(YP, OUTPUT);
+        pinMode(XM, OUTPUT);
+        showGraph = true;
+        tft.fillRect(0,TFT_HEIGHT-TFT_HEIGHT*4/5,TFT_WIDTH,
+          TFT_HEIGHT*2/5,tft.color565(200,160,188));
+        tft.fillRect(0,TFT_HEIGHT-TFT_HEIGHT*4/5,TFT_WIDTH,3,TFT_BLACK);
+        tft.fillRect(0,TFT_HEIGHT-TFT_HEIGHT*2/5,TFT_WIDTH,3,TFT_BLACK);
+        pinMode(YP, INPUT);
+        pinMode(XM, INPUT);
       }
 
       // stops work out
-      if (pty <= TFT_HEIGHT/4){
+      if (pty <= TFT_HEIGHT/5){
   			int timeElaspedSeconds = stopWatch_s + (stopWatch_m*60) + (stopWatch_h*3600);
   			// add time in workout to clock
   			int spacing[] = {185,105,30};int colorRGB[] = {100,200,50};
   			updateTime(timeElaspedSeconds,CLKseconds, CLKminutes, CLKhour
   	 			,spacing,colorRGB,TIMEROW); // add one second
+        // calculates average acceleration
+        AcAvg = AcTot / timeElaspedSeconds;
   			drawHome(); // go to home screen
   			currentMode = HOME;
   			// reset pitch and roll if we exit out
