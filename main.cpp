@@ -261,9 +261,9 @@ void calibration() {
 void processAc() {
   // get measurements
   measurements();
-  AcX /= 16384;
-  AcY /= 16384;
-  AcZ /= 16384;
+  AcX = abs(AcX);
+  AcY = abs(AcY);
+  AcZ = abs(AcY);
   AcTot = AcX + AcY + AcZ;
 }
 
@@ -447,9 +447,9 @@ void drawWorkout(int stopWatch_h, int stopWatch_m, int stopWatch_s) {
   // draw the graph button
   tft.setTextSize(3);
   tft.setTextColor(TFT_BLACK, tft.color565(200,160,188));
-  tft.setCursor(TFT_WIDTH/8 + 22,TFT_HEIGHT-TFT_HEIGHT*2/3 + 20);
+  tft.setCursor(TFT_WIDTH/8 + 32,TFT_HEIGHT*2/5 + 20);
   tft.print("SHOW GRAPH");
-  tft.fillRect(TFT_WIDTH/8,TFT_HEIGHT-TFT_HEIGHT*2/3,
+  tft.fillRect(TFT_WIDTH/8,TFT_HEIGHT*2/5,
          TFT_WIDTH-TFT_WIDTH/4,3,TFT_BLACK);
 
 	//print the stop watch
@@ -524,6 +524,7 @@ void qSort(AcData a[], int n) {
 */
 void workout(){
 	bool screenOn = true;
+  	bool showGraph = false;
 	int stopWatch_h = 0; int stopWatch_m = 0; int stopWatch_s = 0;
 	drawWorkout(stopWatch_h,stopWatch_m,stopWatch_s);
 	// // stopwatch starts at 0
@@ -552,13 +553,13 @@ void workout(){
 	// // spacing and colorRGB used for updated stopwatch
 	int spacing[]={TFT_WIDTH/2+75,TFT_WIDTH/2-20,TFT_WIDTH/2-120};
 	int colorRGB[]={200,160,188};
-  int oldRoll = 0;
-  int time_millis = millis();
+	int oldRoll = 0;
+	int time_millis = millis();
 
-  // reset values
-  AcAvg = 0;
-  bool showGraph = false;
-  int AcIndex = 0;
+	// reset values
+	AcAvg = 0;
+	int AcIndex = 0;
+	int graphIndex = 0;
 
 	while (true){
 		time_millis = millis();
@@ -573,9 +574,18 @@ void workout(){
       processAc();
       ac_data[AcIndex].AcTotal = AcTot;
       AcIndex++;
-      // show graph if button was pressed
-      if (showGraph == true) {
-
+      // print points on graph if button was pressed
+      // graph is only relative and not in SI units
+      if (showGraph == true && screenOn == true) {
+        pinMode(YP, OUTPUT);
+        pinMode(XM, OUTPUT);
+        AcTot /= (2048/16); // reduce value for graph
+        // max acceleration to ceiling of graph
+        if (AcTot > TFT_HEIGHT*2/5-9) {
+          AcTot = TFT_HEIGHT*2/5-9;
+        }
+        tft.fillCircle(graphIndex,TFT_HEIGHT*3/5-AcTot-3,2,TFT_RED);
+        graphIndex++;
       }
 
   		// while in workout mode, get the gyroscope data
@@ -584,6 +594,7 @@ void workout(){
   		if (abs(roll - oldRoll) > 2) {
   			if (screenOn == true){
   				screenOn = false; // turn it off
+          showGraph = false;
   				// go from on to off
   				pinMode(YP, OUTPUT);
    				pinMode(XM, OUTPUT);  
@@ -615,21 +626,29 @@ void workout(){
     // I set both graph and stop work out buttons in here so maybe keep?
     // TEMPORARY///FOR TESTING PURPOSES//////////////////////
   	TSPoint touch = ts.getPoint();
-   	if (touch.z >= MINPRESSURE && touch.z <= MAXPRESSURE) { 
+   	if (touch.z >= MINPRESSURE && touch.z <= MAXPRESSURE && screenOn == true) { 
   		// ***** probably change this, for testing only
       int pty = map(touch.y, TS_MINX, TS_MAXX, 0, TFT_WIDTH);
 
       // graph button pushed
-      if (pty > TFT_HEIGHT/5) {
+      // show graph
+      if (pty > TFT_HEIGHT/5 && showGraph == false) {
         pinMode(YP, OUTPUT);
         pinMode(XM, OUTPUT);
         showGraph = true;
-        tft.fillRect(0,TFT_HEIGHT-TFT_HEIGHT*4/5,TFT_WIDTH,
+        graphIndex = 0;
+        tft.fillRect(0,TFT_HEIGHT*1/5,TFT_WIDTH,
           TFT_HEIGHT*2/5,tft.color565(200,160,188));
-        tft.fillRect(0,TFT_HEIGHT-TFT_HEIGHT*4/5,TFT_WIDTH,3,TFT_BLACK);
-        tft.fillRect(0,TFT_HEIGHT-TFT_HEIGHT*2/5,TFT_WIDTH,3,TFT_BLACK);
+        tft.fillRect(0,TFT_HEIGHT*1/5,TFT_WIDTH,3,TFT_BLACK);
+        tft.fillRect(0,TFT_HEIGHT*3/5,TFT_WIDTH,3,TFT_BLACK);
         pinMode(YP, INPUT);
         pinMode(XM, INPUT);
+      }
+      // touching graph hides and resets it
+      else {
+        showGraph = false;
+        // redraw
+        drawWorkout(stopWatch_h,stopWatch_m,stopWatch_s); 
       }
 
       // stops work out
