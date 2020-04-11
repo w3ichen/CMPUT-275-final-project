@@ -625,112 +625,108 @@ void workout(){
 
 	while (true){
 		time_millis = millis();
+	    if (time_millis%100 == 0) {
+			// save total acceleration every 100ms
+			processAc();
+			ac_data[AcIndex].AcTotal = AcTot;
+			AcIndex++;
+			// print points on graph if button was pressed
+			// graph is only relative and not in SI units
+			if (showGraph == true && screenOn == true) {
+				pinMode(YP, OUTPUT);
+				pinMode(XM, OUTPUT);
+				AcTot /= (2048/16); // reduce value for graph
+				// max acceleration to ceiling of graph
+				if (AcTot > TFT_HEIGHT*2/5-9) {
+				  AcTot = TFT_HEIGHT*2/5-9;
+				}
+				tft.fillCircle(graphIndex,TFT_HEIGHT*3/5-AcTot-3,2,TFT_RED);
+				graphIndex++;
+	    	}
 
-    if (time_millis%100 == 0){
-      // save total acceleration every 100ms
-      processAc();
-      ac_data[AcIndex].AcTotal = AcTot;
-      AcIndex++;
-      // print points on graph if button was pressed
-      // graph is only relative and not in SI units
-      if (showGraph == true && screenOn == true) {
-        pinMode(YP, OUTPUT);
-        pinMode(XM, OUTPUT);
-        AcTot /= (2048/16); // reduce value for graph
-        // max acceleration to ceiling of graph
-        if (AcTot > TFT_HEIGHT*2/5-9) {
-          AcTot = TFT_HEIGHT*2/5-9;
-        }
-        tft.fillCircle(graphIndex,TFT_HEIGHT*3/5-AcTot-3,2,TFT_RED);
-        graphIndex++;
-      }
+			// while in workout mode, get the gyroscope data
+			processGyr();
+			// "turn off" screen if screen is on its side position
+	  		if (abs(roll - oldRoll) > 10) {
+	  			if (screenOn == true){
+	  				screenOn = false; // turn it off
+	          		showGraph = false;
+	  				// go from on to off
+	  				pinMode(YP, OUTPUT);
+	   				pinMode(XM, OUTPUT);  
+	  		 		tft.fillScreen(TFT_BLACK);
+	  		 		Serial.println("turning screen off");
+	  			} else if (screenOn == false){
+	  				screenOn = true;
+	  				// redraw
+	  				drawWorkout(stopWatch_h,stopWatch_m,stopWatch_s); 
+	  			}
+	  		}
+	  		// set the old roll to new reading of roll
+	  		oldRoll = roll; 
+    	}
 
-  		// while in workout mode, get the gyroscope data
-  		processGyr();
-  		// "turn off" screen if screen is on its side position
-  		if (abs(roll - oldRoll) > 2) {
-  			if (screenOn == true){
-  				screenOn = false; // turn it off
-          showGraph = false;
-  				// go from on to off
-  				pinMode(YP, OUTPUT);
-   				pinMode(XM, OUTPUT);  
-  		 		tft.fillScreen(TFT_BLACK);
-  		 		Serial.println("turning screen off");
-  			}else if (screenOn == false){
-  				screenOn = true;
-  				// redraw
-  				drawWorkout(stopWatch_h,stopWatch_m,stopWatch_s); 
-  			}
-  		}
+		if (time_millis%1000 == 0){
+			Serial.println("updating seconds");
+			// always update the time every 1000 milliseconds
+			if (screenOn == true){
+				// only use function if screen is on
+				updateTime(1,stopWatch_s, stopWatch_m, stopWatch_h
+				,spacing,colorRGB,STOPROW);
+			}else{
+				// add one but don't print
+				stopWatch_s += 1;
+			}
+	    }
 
-  		// set the old roll to new reading of roll
-  		oldRoll = roll; 
-    }
-    if (time_millis%1000 == 0){
-    	Serial.println("updating seconds");
-    		// always update the time every 1000 milliseconds
-    		if (screenOn == true){
-    			// only use function if screen is on
-    			updateTime(1,stopWatch_s, stopWatch_m, stopWatch_h
-    			,spacing,colorRGB,STOPROW);
-    		}else{
-    			// add one but don't print
-    			stopWatch_s += 1;
-    		}
-    }
+		// I set both graph and stop work out buttons in here so maybe keep?
+		// TEMPORARY///FOR TESTING PURPOSES//////////////////////
+		TSPoint touch = ts.getPoint();
+		if (touch.z >= MINPRESSURE && touch.z <= MAXPRESSURE && screenOn == true) { 
+			// ***** probably change this, for testing only
+			int pty = map(touch.y, TS_MINX, TS_MAXX, 0, TFT_WIDTH);
+			// graph button pushed
+			// show graph
+			if (pty > TFT_HEIGHT/5 && showGraph == false) {
+			pinMode(YP, OUTPUT);
+			pinMode(XM, OUTPUT);
+			showGraph = true;
+			graphIndex = 0;
+			tft.fillRect(0,TFT_HEIGHT*1/5,TFT_WIDTH,
+			  TFT_HEIGHT*2/5,tft.color565(200,160,188));
+			tft.fillRect(0,TFT_HEIGHT*1/5,TFT_WIDTH,3,TFT_BLACK);
+			tft.fillRect(0,TFT_HEIGHT*3/5,TFT_WIDTH,3,TFT_BLACK);
+			pinMode(YP, INPUT);
+			pinMode(XM, INPUT);
+			}
+			// touching graph hides and resets it
+			else {
+			showGraph = false;
+			// redraw
+			drawWorkout(stopWatch_h,stopWatch_m,stopWatch_s); 
+			}
 
-    // I set both graph and stop work out buttons in here so maybe keep?
-    // TEMPORARY///FOR TESTING PURPOSES//////////////////////
-  	TSPoint touch = ts.getPoint();
-   	if (touch.z >= MINPRESSURE && touch.z <= MAXPRESSURE && screenOn == true) { 
-  		// ***** probably change this, for testing only
-      int pty = map(touch.y, TS_MINX, TS_MAXX, 0, TFT_WIDTH);
+			// stops work out
+			if (pty <= TFT_HEIGHT/5){
+			   
+			currentMode = END_WORKOUT;
+			 
+			int timeElaspedSeconds = stopWatch_s + (stopWatch_m*60) + (stopWatch_h*3600);
 
-      // graph button pushed
-      // show graph
-      if (pty > TFT_HEIGHT/5 && showGraph == false) {
-        pinMode(YP, OUTPUT);
-        pinMode(XM, OUTPUT);
-        showGraph = true;
-        graphIndex = 0;
-        tft.fillRect(0,TFT_HEIGHT*1/5,TFT_WIDTH,
-          TFT_HEIGHT*2/5,tft.color565(200,160,188));
-        tft.fillRect(0,TFT_HEIGHT*1/5,TFT_WIDTH,3,TFT_BLACK);
-        tft.fillRect(0,TFT_HEIGHT*3/5,TFT_WIDTH,3,TFT_BLACK);
-        pinMode(YP, INPUT);
-        pinMode(XM, INPUT);
-      }
-      // touching graph hides and resets it
-      else {
-        showGraph = false;
-        // redraw
-        drawWorkout(stopWatch_h,stopWatch_m,stopWatch_s); 
-      }
+			int spacing[] = {185,105,30};int colorRGB[] = {100,200,50};
+			updateTime(timeElaspedSeconds,CLKseconds, CLKminutes, CLKhour
+				   ,spacing,colorRGB,TIMEROW); // add one second
 
-      // stops work out
-      if (pty <= TFT_HEIGHT/5){
-      	   
-      	    currentMode = END_WORKOUT;
-      	     
-      	    int timeElaspedSeconds = stopWatch_s + (stopWatch_m*60) + (stopWatch_h*3600);
-           
-  	        int spacing[] = {185,105,30};int colorRGB[] = {100,200,50};
-  	        updateTime(timeElaspedSeconds,CLKseconds, CLKminutes, CLKhour
-  	 		   ,spacing,colorRGB,TIMEROW); // add one second
-           
-            //calculates average acceleration
-            AcAvg = AcTot / timeElaspedSeconds;
-           
-            drawResults(timeElaspedSeconds,AcAvg); // go to results page
-           	delay(10000);
-           	drawHome();  // go to homepage 10 seeconds after displaying the results page
-           	break;           	  
-  				
-      }
-    ///////////////////////////////////////////////////////////////////
- 	  }
+			//calculates average acceleration
+			AcAvg = AcTot / timeElaspedSeconds;
 
+			drawResults(timeElaspedSeconds,AcAvg); // go to results page
+			delay(10000);
+			drawHome();  // go to homepage 10 seeconds after displaying the results page
+			break;           	  			
+			}
+			///////////////////////////////////////////////////////////////////
+		}
 	}
 	pinMode(YP, INPUT);
  	pinMode(XM, INPUT);  
