@@ -48,9 +48,9 @@ Notes and Assumptions:
 CODING NOTES vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 Step 1:
 - User interface on the touchscreen with the following buttons:
-      i. [DONE] temperature icon that updates ~10 seconds
-      ii. [DONE] Current time and date at top (if possible) probably gets time/date from computer at upload
-      iii. [DONE] Start workout button
+      i. temperature icon that updates ~10 seconds
+      ii. Current time and date at top (if possible) probably gets time/date from computer at upload
+      iii. Start workout button
       iv. End workout button
       v. View realtime graph
 - Use gyroscope to turn screen off to save power when device is not facing up (prob find voltage pin to display and digitwrite it to off??)
@@ -66,21 +66,6 @@ Here is where most of algorithms is used to analyze recorded data in a meaningfu
 - When end workout is pressed:
       i. Show time elapsed
       ii. (?) use sort algorithm to find time of most activity (highest acceleration) (?)
-** analyze data using algorithms in a meaningful way**
-maybe comparing to previous workouts to see if they improved.
 
 
-_____________________________________
-OTHER NOTES:
-- plz use meausrements() function to get measurements
-- plz update currentMode as you change to different modes
-___________________
-!!note Arduino desktop IDE has a plotting called "serial plotter"
-"https://learn.adafruit.com/experimenters-guide-for-metro/circ08-using%20the%20arduino%20serial%20plotter"
-Useful for visualizing acceleration data!!
-ex. 
-Serial.print(GyX);Serial.print(" ");
-Serial.print(GyY);Serial.print(" ");
-Serial.println(GyZ);
-will plot 3 lines of GyX, GyY and GyZ
 
