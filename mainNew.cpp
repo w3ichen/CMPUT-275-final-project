@@ -5,7 +5,6 @@
 // Final Project : Fitness Tracking Device
 //===================================================================================================
 
-
 #include <Arduino.h>
 #include <MCUFRIEND_kbv.h>
 #include <TouchScreen.h>
@@ -72,7 +71,6 @@ void calibration();
 //===================================================================================================
 
 void setup() {
-	
 	init();
 	Serial.begin(9600);
 
@@ -141,7 +139,6 @@ void process_line(int index) {
   // clear the buffer
   buf_len = 0;
   buffer[buf_len] = 0;
-
 }
 
 //===================================================================================================
@@ -184,13 +181,9 @@ void syncTimeDate(){
 	              buf_len++;
 	              buffer[buf_len] = 0;
 	          }
-	
 	      }
-    
       }
-	
 	}
-
 }
 
 //===================================================================================================
@@ -241,14 +234,9 @@ void drawHome(){
 
 //===================================================================================================
 
-// for debugging purposes /// **** REMOVE LATER***** ///
-char temp_str[7];
-char* int16_to_str(int16_t num) {
-	sprintf(temp_str, "%6d", num);
-	return temp_str;
-}
-
-// 
+/*
+	calibrate measuring device module
+*/ 
 void calibration() {
 	// set all values initially to 0
 	GyXCal = 0;
@@ -298,7 +286,6 @@ void calibration() {
  process acceleration readings
 */
 void processAc() {
-  
   // get measurements
   measurements();
   AcX = abs(AcX);
@@ -311,10 +298,9 @@ void processAc() {
 //===================================================================================================
 
 /*
- process gyro readings and get them into pitch and roll values
+ 	process gyro readings and get them into pitch and roll values
 */
 void processGyr() {
-
 	// first get the measurements
 	measurements();
 	// divide GyX and GyY by 65.5 to convert reading into degrees 
@@ -326,7 +312,6 @@ void processGyr() {
 	// frequency of getting readings 
 	pitch += GyX/25;
 	roll += GyY/25;
-	
 }
 
 //===================================================================================================
@@ -388,31 +373,25 @@ void updateTime(int addSeconds, int &seconds, int &minutes, int &hour
 	// update seconds
 	tft.setCursor(spacing[0],rowLine); tft.print(seconds);
 	if (addMinutes > 0){
-
 		// need to update minutes if addMinutes is not 0
 		if (minutes < 10){
 			//redraw background for 1 digit numbers
 			tft.setCursor(spacing[1],rowLine); tft.print("  ");
 		}
-
 		tft.setCursor(spacing[1],rowLine); tft.print(minutes);
 	}
 
 	if (addHours > 0){
-		
 		// need to update hours if addHours is not 0
 		if (hour < 10){
-		
 			//redraw background for 1 digit numbers
 			tft.setCursor(spacing[2],rowLine); tft.print("  ");
 		}
-
 		tft.setCursor(spacing[2],rowLine); tft.print(hour);
 	}
 
  	pinMode(YP, INPUT);
  	pinMode(XM, INPUT);
-
 }
 
 //===================================================================================================
@@ -421,7 +400,6 @@ void updateTime(int addSeconds, int &seconds, int &minutes, int &hour
 	Update temperature measurement on home screen
 */
 void updateTemp(){
-	
 	tft.setTextSize(3);
 	pinMode(YP, OUTPUT);
 	pinMode(XM, OUTPUT);
@@ -555,7 +533,6 @@ int pivot(AcData a[], int n, int pi) {
   // store high and low index
   int lo = 0;
   int hi = n-2;
-
   // iterate until lo > hi
   while (lo <= hi) {
    
@@ -572,7 +549,6 @@ int pivot(AcData a[], int n, int pi) {
       swap(a[lo], a[hi]);
     }
   }
-  
   // swap the pivot back into position
   swap(a[lo], a[n-1]);
 
@@ -672,7 +648,7 @@ void workout(){
 			if (screenOn == true){
 				// only use function if screen is on
 				updateTime(1,stopWatch_s, stopWatch_m, stopWatch_h
-				,spacing,colorRGB,STOPROW);
+				          ,spacing,colorRGB,STOPROW);
 			}else{
 				// add one but don't print
 				stopWatch_s += 1;
@@ -688,42 +664,41 @@ void workout(){
 			// graph button pushed
 			// show graph
 			if (pty > TFT_HEIGHT/5 && showGraph == false) {
-			pinMode(YP, OUTPUT);
-			pinMode(XM, OUTPUT);
-			showGraph = true;
-			graphIndex = 0;
-			tft.fillRect(0,TFT_HEIGHT*1/5,TFT_WIDTH,
-			TFT_HEIGHT*2/5,tft.color565(200,160,188));
-			tft.fillRect(0,TFT_HEIGHT*1/5,TFT_WIDTH,3,TFT_BLACK);
-			tft.fillRect(0,TFT_HEIGHT*3/5,TFT_WIDTH,3,TFT_BLACK);
-			pinMode(YP, INPUT);
-			pinMode(XM, INPUT);
+				pinMode(YP, OUTPUT);
+				pinMode(XM, OUTPUT);
+				showGraph = true;
+				graphIndex = 0;
+				tft.fillRect(0,TFT_HEIGHT*1/5,TFT_WIDTH,
+				TFT_HEIGHT*2/5,tft.color565(200,160,188));
+				tft.fillRect(0,TFT_HEIGHT*1/5,TFT_WIDTH,3,TFT_BLACK);
+				tft.fillRect(0,TFT_HEIGHT*3/5,TFT_WIDTH,3,TFT_BLACK);
+				pinMode(YP, INPUT);
+				pinMode(XM, INPUT);
 			}
 			// touching graph hides and resets it
 			else {
-			showGraph = false;
-			// redraw
-			drawWorkout(stopWatch_h,stopWatch_m,stopWatch_s); 
+				showGraph = false;
+				// redraw
+				drawWorkout(stopWatch_h,stopWatch_m,stopWatch_s); 
 			}
 
 			// stops work out
-			if (pty <= TFT_HEIGHT/5){
-			   
-			currentMode = END_WORKOUT;
-			 
-			int timeElaspedSeconds = stopWatch_s + (stopWatch_m*60) + (stopWatch_h*3600);
+			if (pty <= TFT_HEIGHT/5){  
+				currentMode = END_WORKOUT;
+				 
+				int timeElaspedSeconds = stopWatch_s + (stopWatch_m*60) + (stopWatch_h*3600);
 
-			int spacing[] = {185,105,30};int colorRGB[] = {100,200,50};
-			updateTime(timeElaspedSeconds,CLKseconds, CLKminutes, CLKhour
-				   ,spacing,colorRGB,TIMEROW); // add one second
+				int spacing[] = {185,105,30};int colorRGB[] = {100,200,50};
+				updateTime(timeElaspedSeconds,CLKseconds, CLKminutes, CLKhour
+					   ,spacing,colorRGB,TIMEROW); // add one second
 
-			//calculates average acceleration
-			AcAvg = AcTot / timeElaspedSeconds;
+				//calculates average acceleration
+				AcAvg = AcTot / timeElaspedSeconds;
 
-			drawResults(timeElaspedSeconds,AcAvg); // go to results page
-			delay(10000);
-			drawHome();  // go to homepage 10 seeconds after displaying the results page
-			break;           	  			
+				drawResults(timeElaspedSeconds,AcAvg); // go to results page
+				delay(10000);
+				drawHome();  // go to homepage 10 seeconds after displaying the results page
+				break;           	  			
 			}
 			///////////////////////////////////////////////////////////////////
 		}
@@ -756,12 +731,11 @@ int main() {
 	 		updateTemp(); // update temp
 	 		int spacing[] = {185,105,30}; int colorRGB[] = {100,200,50};
 	 		updateTime(1,CLKseconds, CLKminutes, CLKhour
-	 			,spacing,colorRGB,TIMEROW); // add one second
+	 			      ,spacing,colorRGB,TIMEROW); // add one second
 	 	}
 	 	if (currentMode == BEGIN_WORKOUT){
 	 		// if mode is BEGIN_WORKOUT, go to workout page
 	 		workout();
 	 	}
-
 	}
 }
