@@ -693,7 +693,7 @@ void workout(){
 			showGraph = true;
 			graphIndex = 0;
 			tft.fillRect(0,TFT_HEIGHT*1/5,TFT_WIDTH,
-			  TFT_HEIGHT*2/5,tft.color565(200,160,188));
+			TFT_HEIGHT*2/5,tft.color565(200,160,188));
 			tft.fillRect(0,TFT_HEIGHT*1/5,TFT_WIDTH,3,TFT_BLACK);
 			tft.fillRect(0,TFT_HEIGHT*3/5,TFT_WIDTH,3,TFT_BLACK);
 			pinMode(YP, INPUT);
